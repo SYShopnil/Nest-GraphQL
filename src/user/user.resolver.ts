@@ -17,7 +17,7 @@ export class UserResolver {
   @ResolveField(() => ProfileObject, { name: 'profile' })
   async findProfile(@Parent() user: UserObject) {
     // console.log({ user });
-    console.log(`hello`);
+    console.log(`fired`);
     return (await this.userService.findProfile(user.id)) as ProfileObject;
   }
 
@@ -26,7 +26,7 @@ export class UserResolver {
     return this.userService.findUserById(profile.id);
   }
 
-  @ResolveField(() => PostObject, { name: 'posts' })
+  @ResolveField(() => [PostObject], { name: 'posts' })
   async posts(@Parent() user: UserObject) {
     return this.postService.getPostsByUserId(user.id);
   }

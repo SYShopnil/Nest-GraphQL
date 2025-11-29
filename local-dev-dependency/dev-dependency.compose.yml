@@ -1,0 +1,85 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: postgres
+    ports:
+      - '5433:5432' # host:container
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - '8080:80' # http://localhost:8080
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    command: >
+      sh -c '
+      if [ -n "$REDIS_PASSWORD" ]; then
+        echo "🔐 Starting Redis with password protection";
+        exec redis-server \
+          --requirepass "$REDIS_PASSWORD" \
+          --appendonly yes \
+          --save 60 1000 \
+          --maxmemory-policy allkeys-lru;
+      else
+        echo "⚡ Starting Redis without password";
+        exec redis-server \
+          --appendonly yes \
+          --save 60 1000 \
+          --maxmemory-policy allkeys-lru;
+      fi
+      '
+    environment:
+      REDIS_PASSWORD: admin123 # empty = no password
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'sh',
+          '-c',
+          'redis-cli ${REDIS_PASSWORD:+-a $REDIS_PASSWORD} ping | grep -q PONG',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    restart: always
+    ports:
+      - '8001:5540' # http://localhost:8001
+    volumes:
+      - redisinsight_data:/data
+    depends_on:
+      - redis
+
+volumes:
+  pg_data:
+  pgadmin_data:
+  redis_data:
+  redisinsight_data:
